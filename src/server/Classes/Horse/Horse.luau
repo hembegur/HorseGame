@@ -13,6 +13,8 @@ local knockback = require(ReplicatedStorage.Shared.Modules.Game.Applyknockback)
 local Horse = {}
 Horse.__index = Horse
 
+export type State = "Idle" | "Flying"
+
 export type Horse = typeof(setmetatable(
 	{} :: {
 		Character: Model,
@@ -20,6 +22,7 @@ export type Horse = typeof(setmetatable(
 		Hitbox: BasePart,
 		Attachment: Attachment,
 		_alive: boolean,
+		State: State,
 	},
 	Horse
 ))
@@ -59,12 +62,14 @@ function Horse.new(character: Model): Horse
 
 	local self: Horse = setmetatable({
 		Character = character,
-		Player = Players:GetPlayerFromCharacter(character),
 		Model = model,
 		Hitbox = model.Hitbox,
 		Attachment = model.Hitbox.Attachment,
+		State = "Idle" :: State, -- <<< add this
 		_alive = true,
 	}, Horse)
+
+	self:Anchor() -- <<< spawn anchored
 
 	-- Cleanup when the character is removed
 	character.AncestryChanged:Connect(function()
