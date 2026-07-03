@@ -2,7 +2,9 @@
 -- Horse.luau
 -- An object that spawns a rideable horse welded to a character, with a launch ability.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Packets = require(ReplicatedStorage.Shared.Modules.Core.Packets)
 
 local knockback = require(ReplicatedStorage.Shared.Modules.Game.Applyknockback)
 -- local packets = require(ReplicatedStorage.Shared.Modules.Core.Packets) -- (uncomment if needed)
@@ -57,6 +59,7 @@ function Horse.new(character: Model): Horse
 
 	local self: Horse = setmetatable({
 		Character = character,
+		Player = Players:GetPlayerFromCharacter(character),
 		Model = model,
 		Hitbox = model.Hitbox,
 		Attachment = model.Hitbox.Attachment,
@@ -80,12 +83,15 @@ end
 		horse:Launch()                              -- straight up
 		horse:Launch(Vector3.new(0, 15000, 30000))  -- up and forward
 ]]
-function Horse.Launch(self: Horse, force: Vector3?, maxForce: Vector3?, duration: number?)
+function Horse.Launch(self: Horse, direction: Vector3?, force: number?, duration: number?)
 	if not self._alive then
 		return
 	end
 
-	knockback(self.Attachment, force or DEFAULT_FORCE, maxForce or DEFAULT_MAX_FORCE, duration or DEFAULT_DURATION)
+	local dir = (direction or Vector3.new(0, 1, 0)).Unit
+	local magnitude = force or 20000
+
+	knockback(self.Attachment, dir * magnitude, DEFAULT_MAX_FORCE, duration or DEFAULT_DURATION)
 end
 
 -- Rotates the hitbox ball by the given Euler angles (in degrees).
@@ -108,6 +114,14 @@ function Horse.Destroy(self: Horse)
 	if self.Model then
 		self.Model:Destroy()
 	end
+end
+
+function Horse.Anchor(self: Horse)
+	self.Hitbox.Anchored = true
+end
+
+function Horse.Unanchor(self: Horse)
+	self.Hitbox.Anchored = false
 end
 
 return Horse

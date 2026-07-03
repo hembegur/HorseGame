@@ -4,7 +4,10 @@ local packet = require(packages:WaitForChild("Packet"))
 
 local Packets = {}
 
-Packets.LaunchHorse = packet("LaunchHorse", packet.Any)
+Packets.HorseReady = packet("HorseReady", packet.Instance)
+-- Packets.luau
+Packets.LaunchHorse = packet("LaunchHorse", packet.Vector3F24, packet.NumberU8) -- direction + power
+Packets.HorseStateChanged = packet("HorseStateChanged", packet.String)
 
 return Packets
 
