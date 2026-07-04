@@ -17,7 +17,7 @@ end)
 -- HorseService (sketch)
 local MIN_POWER, MAX_POWER = 10, 100
 local FLIGHT_DURATION = 2
-local POWER_MULTIPLIER = 1
+local BASE_POWER = 60
 
 Packets.LaunchHorse.OnServerEvent:Connect(function(player, direction: Vector3, power: number)
 	local horse = HorseService.Registry[player]
@@ -31,7 +31,7 @@ Packets.LaunchHorse.OnServerEvent:Connect(function(player, direction: Vector3, p
 	power = math.clamp(power, MIN_POWER, MAX_POWER) -- never trust the client's number
 	horse.State = "Flying"
 	horse:Unanchor()
-	horse:Launch(direction.Unit, power * POWER_MULTIPLIER)
+	horse:Launch(direction.Unit, BASE_POWER * power / 100)
 
 	task.delay(FLIGHT_DURATION, function()
 		if not horse._alive then

@@ -47,12 +47,14 @@ function Horse.new(character: Model): Horse
 
 	-- Disable humanoid so it doesn't interfere with movement
 	for _, state in Enum.HumanoidStateType:GetEnumItems() do
+		--print(state)
 		if state == Enum.HumanoidStateType.None then
 			continue
 		end
 		humanoid:SetStateEnabled(state, false)
 	end
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	humanoid.PlatformStand = true
 
