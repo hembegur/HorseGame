@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packets = require(ReplicatedStorage.Shared.Modules.Core.Packets)
+local RunService = game:GetService("RunService")
 
 local knockback = require(ReplicatedStorage.Shared.Modules.Game.Applyknockback)
 -- local packets = require(ReplicatedStorage.Shared.Modules.Core.Packets) -- (uncomment if needed)
@@ -23,6 +24,7 @@ export type Horse = typeof(setmetatable(
 		Attachment: Attachment,
 		_alive: boolean,
 		State: State,
+		_facingConnection: RBXScriptConnection?,
 	},
 	Horse
 ))
@@ -44,6 +46,14 @@ function Horse.new(character: Model): Horse
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 
 	-- Disable humanoid so it doesn't interfere with movement
+	for _, state in Enum.HumanoidStateType:GetEnumItems() do
+		if state == Enum.HumanoidStateType.None then
+			continue
+		end
+		humanoid:SetStateEnabled(state, false)
+	end
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	humanoid.PlatformStand = true
 
 	-- Disable collision / mass on all character parts
@@ -69,7 +79,7 @@ function Horse.new(character: Model): Horse
 		_alive = true,
 	}, Horse)
 
-	self:Anchor() -- <<< spawn anchored
+	self:Anchor(true) -- <<< spawn anchored
 
 	-- Cleanup when the character is removed
 	character.AncestryChanged:Connect(function()
@@ -109,23 +119,57 @@ function Horse.Rotate(self: Horse, x: number?, y: number?, z: number?)
 	align.CFrame *= CFrame.fromEulerAngles(math.rad(x or 0), math.rad(y or 0), math.rad(z or 0))
 end
 
+function Horse._startFacingVelocity(self: Horse)
+	if self._facingConnection then
+		return
+	end
+
+	self._facingConnection = RunService.Heartbeat:Connect(function()
+		local velocity = self.Hitbox.AssemblyLinearVelocity
+		if velocity.Magnitude < 1 then
+			return -- avoid jitter when nearly stationary
+		end
+
+		local direction = velocity.Unit
+		self.Attachment.AlignOrientation.CFrame = CFrame.lookAt(Vector3.zero, direction)
+	end)
+end
+
+function Horse._stopFacingVelocity(self: Horse)
+	if self._facingConnection then
+		self._facingConnection:Disconnect()
+		self._facingConnection = nil
+	end
+end
+
 -- Tears the horse down. Safe to call more than once.
 function Horse.Destroy(self: Horse)
 	if not self._alive then
 		return
 	end
 	self._alive = false
+	self:_stopFacingVelocity()
 
 	if self.Model then
 		self.Model:Destroy()
 	end
 end
 
-function Horse.Anchor(self: Horse)
+function Horse.Anchor(self: Horse, resetVelocity: boolean)
 	self.Hitbox.Anchored = true
+	self:_stopFacingVelocity()
+
+	-- Defaults to true — normal post-launch anchor should stop the horse dead.
+	-- Pass false for stuns (or anything that should preserve momentum for when
+	-- the horse is unanchored again).
+	if resetVelocity ~= false then
+		self.Hitbox.AssemblyLinearVelocity = Vector3.zero
+		self.Hitbox.AssemblyAngularVelocity = Vector3.zero
+	end
 end
 
 function Horse.Unanchor(self: Horse)
+	self:_startFacingVelocity()
 	self.Hitbox.Anchored = false
 end
 
