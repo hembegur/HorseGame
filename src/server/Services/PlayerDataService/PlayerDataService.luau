@@ -73,6 +73,9 @@ function PlayerDataService.RecordMatchPlayed(player: Player)
 end
 
 function PlayerDataService.GiveWinRewards(player: Player)
+	if typeof(player) ~= "Instance" then
+		return -- bots don't have profiles
+	end
 	-- Guard against a player winning before their profile finished loading.
 	PlayerDataService.WaitForData(player)
 

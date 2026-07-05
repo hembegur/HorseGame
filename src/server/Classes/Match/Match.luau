@@ -24,6 +24,12 @@ local Border = require(ServerScriptService.Server.Classes.Border.Border)
 local HorseService = require(ServerScriptService.Server.Services.HorseService.HorseService)
 local MapService = require(ServerScriptService.Server.Services.MapService.MapService)
 
+type Contestant = Player | any -- Player or Bot (duck-typed)
+
+local function isRealPlayer(contestant: any): boolean
+	return typeof(contestant) == "Instance"
+end
+
 export type Gamemode = "FFA" | "Team"
 
 local Match = {}
@@ -53,7 +59,12 @@ function Match.new(participants: { Player }, gamemode: Gamemode): Match
 		_connections = {},
 		_pendingLaunches = {},
 		_collecting = false,
+		_forceEnded = false,
 	}, Match)
+end
+
+function Match.ForceEnd(self: Match)
+	self._forceEnded = true
 end
 
 -- Runs the whole match. Yields until it ends. Returns the winners
@@ -75,10 +86,15 @@ function Match.Run(self: Match): { Player }
 		-- 2) Aiming phase
 		local duration = GameConfig.TurnDuration
 		for player in self._alive do
-			Packets.TurnStarted:FireClient(player, duration)
+			if isRealPlayer(player) then
+				Packets.TurnStarted:FireClient(player, duration)
+			end
 		end
 		for t = duration, 1, -1 do
 			self:_broadcast(`Turn {turn} — Aim! ({t})`)
+			if self._forceEnded then
+				break
+			end
 			task.wait(1)
 		end
 
@@ -90,6 +106,10 @@ function Match.Run(self: Match): { Player }
 		self:_launchAll()
 		task.wait(GameConfig.FlightDuration)
 		self:_anchorAll()
+		if self._forceEnded then
+			winners = {}
+			break
+		end
 
 		-- 5) Evaluate
 		local done
@@ -194,7 +214,7 @@ function Match._setup(self: Match)
 				return
 			end
 			for other in self._alive do
-				if other ~= player and other:GetAttribute("Team") == team then
+				if other ~= player and other:GetAttribute("Team") == team and isRealPlayer(player) then
 					Packets.TeammateAim:FireClient(other, player, direction)
 				end
 			end
@@ -210,8 +230,13 @@ function Match._collectLaunchData(self: Match)
 
 	local expected = 0
 	for player in self._alive do
-		expected += 1
-		Packets.RequestLaunchData:FireClient(player)
+		if isRealPlayer(player) then
+			expected += 1
+			Packets.RequestLaunchData:FireClient(player)
+		else
+			local direction, power = player:DecideLaunch(self:_aliveHorses())
+			self._pendingLaunches[player] = { direction = direction, power = power }
+		end
 	end
 
 	local deadline = os.clock() + GameConfig.LaunchResponseTimeout
@@ -248,7 +273,9 @@ function Match._anchorAll(self: Match)
 		if horse then
 			horse:Anchor(true)
 			horse.State = "Idle"
-			Packets.HorseStateChanged:FireClient(player, "Idle")
+			if isRealPlayer(player) then
+				Packets.HorseStateChanged:FireClient(player, "Idle")
+			end
 		end
 	end
 end
@@ -318,7 +345,9 @@ end
 
 function Match._broadcast(self: Match, text: string)
 	for _, player in Players:GetPlayers() do
-		Packets.MenuText:FireClient(player, text)
+		if isRealPlayer(player) then
+			Packets.MenuText:FireClient(player, text)
+		end
 	end
 end
 

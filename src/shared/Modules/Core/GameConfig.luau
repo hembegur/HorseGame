@@ -37,6 +37,10 @@ local GameConfig = {
 		WinExp = 100,
 		WinTix = 25,
 	},
+
+	Admins = {
+		[1759574896] = true, -- your UserId here for live servers
+	},
 }
 
 return GameConfig

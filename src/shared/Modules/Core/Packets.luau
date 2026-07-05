@@ -15,6 +15,8 @@ Packets.RequestLaunchData = packet("RequestLaunchData") -- server asks client fo
 Packets.AimUpdate = packet("AimUpdate", packet.Vector3F24) -- client -> server, throttled, for teammate arrows
 Packets.TeammateAim = packet("TeammateAim", packet.Instance, packet.Vector3F24) -- server -> teammates
 
+Packets.AdminCommand = packet("AdminCommand", packet.String)
+
 return Packets
 
 --[[

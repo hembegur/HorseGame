@@ -28,10 +28,29 @@ local function enoughPlayers(): boolean
 	return #Players:GetPlayers() >= GameConfig.MinPlayers
 end
 
+local BotService = require(ServerScriptService.Server.Services.BotService.BotService)
+
+local forceStart = false
+GameLoopService.CurrentMatch = nil :: any
+
+function GameLoopService.RequestForceStart()
+	forceStart = true
+end
+
+function GameLoopService.ForceEndMatch()
+	if GameLoopService.CurrentMatch then
+		GameLoopService.CurrentMatch:ForceEnd()
+	end
+end
+
+local function enoughContestants(): boolean
+	return #Players:GetPlayers() + BotService.GetBotCount() >= GameConfig.MinPlayers
+end
+
 local function runLoop()
 	while true do
 		-- 1) Waiting for players
-		while not enoughPlayers() do
+		while not enoughContestants() and not forceStart do
 			broadcast("Waiting for players...")
 			task.wait(1)
 		end
@@ -45,6 +64,9 @@ local function runLoop()
 				aborted = true
 				break
 			end
+			if forceStart then
+				break
+			end
 		end
 		if aborted then
 			continue
@@ -56,9 +78,15 @@ local function runLoop()
 		task.wait(2)
 
 		-- 4) Match
-		local participants = Players:GetPlayers()
+		forceStart = false
+		local participants = Players:GetPlayers() :: { any }
+		for _, bot in BotService.GetBots() do
+			table.insert(participants, bot)
+		end
 		local match = Match.new(participants, gamemode)
+		GameLoopService.CurrentMatch = match
 		local winners = match:Run()
+		GameLoopService.CurrentMatch = nil
 
 		-- 5) Results + rewards
 		if #winners == 0 then
