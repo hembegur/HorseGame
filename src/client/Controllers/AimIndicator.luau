@@ -21,6 +21,7 @@ export type AimIndicator = typeof(setmetatable(
 		_arrow: Model?,
 		_janitor: any,
 		_locked: boolean,
+		_manual: boolean, -- direction is fed externally (teammate arrows) instead of from the camera
 		_direction: Vector3, -- last computed (or frozen) aim direction
 	},
 	AimIndicator
@@ -32,6 +33,7 @@ function AimIndicator.new(origin: BasePart): AimIndicator
 		_arrow = nil,
 		_janitor = Janitor.new(),
 		_locked = false,
+		_manual = false,
 		_direction = Vector3.new(0, 0, -1),
 	}, AimIndicator)
 
@@ -48,6 +50,7 @@ function AimIndicator.Show(self: AimIndicator)
 	arrow.Parent = workspace
 	self._arrow = arrow
 	self._locked = false
+	self._manual = false
 
 	self._janitor:Add(arrow, "Destroy", "Arrow")
 	self._janitor:Add(
@@ -65,12 +68,24 @@ function AimIndicator.Hide(self: AimIndicator)
 	self._janitor:Remove("Arrow")
 	self._arrow = nil
 	self._locked = false
+	self._manual = false
 end
 
 -- Freezes/unfreezes the direction. While locked, the camera can move
 -- freely without changing the aim.
 function AimIndicator.SetLocked(self: AimIndicator, locked: boolean)
 	self._locked = locked
+end
+
+-- Puts the indicator in manual mode: the direction is supplied externally
+-- (e.g. a teammate's replicated aim) instead of tracking the local camera.
+-- Manual mode is reset by Show()/Hide().
+function AimIndicator.SetManualDirection(self: AimIndicator, direction: Vector3)
+	if direction.Magnitude == 0 then
+		return
+	end
+	self._manual = true
+	self._direction = direction.Unit
 end
 
 function AimIndicator.IsLocked(self: AimIndicator): boolean
@@ -89,7 +104,7 @@ function AimIndicator._update(self: AimIndicator)
 	end
 
 	local camera = workspace.CurrentCamera
-	if not self._locked then
+	if not self._locked and not self._manual then
 		self._direction = camera.CFrame.LookVector
 	end
 

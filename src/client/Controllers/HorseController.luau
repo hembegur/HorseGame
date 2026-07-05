@@ -1,17 +1,23 @@
 --!strict
 -- HorseController.luau
--- Client-side orchestrator for the horse. Owns the launch state machine and
--- the space keybind; delegates visuals to AimIndicator and HorseLaunchUI.
+-- Client-side orchestrator for the horse. Launching is now TURN-BASED and
+-- server-driven — the old free "press space to launch" flow has been removed.
 --
--- State machine:
---   Idle   --space--> Aiming  (arrow + GUI shown, horse still anchored)
---   Aiming --space--> Flying  (launch packet sent, arrow + GUI hidden)
---   Flying --server HorseStateChanged--> Idle (server re-anchored us)
+-- State machine (all transitions come from the server):
+--   Locked --TurnStarted-->        Aiming  (arrow + GUI shown; player adjusts)
+--   Aiming --RequestLaunchData-->  Flying  (final aim sent; UI hidden)
+--   Flying --HorseStateChanged-->  Locked  (server re-anchored us)
 --
--- Space is ignored while Flying. Aiming cannot be cancelled.
+-- While Aiming (team mode support): the aim direction is broadcast to the
+-- server on a throttle so teammates can see our arrow.
+--
+-- ABILITIES (future): bind ability keys in _bindInputs under the "Horse"
+-- keybind context, store the selection while Aiming, and send it alongside
+-- the aim in _submitLaunch.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local Keybind = require(ReplicatedStorage.Shared.Modules.Game.Keybind)
@@ -21,9 +27,9 @@ local AimIndicator = require(script.Parent.AimIndicator)
 local HorseLaunchUI = require(script.Parent.HorseLaunchUI)
 
 local KEYBIND_CONTEXT = "Horse"
-local LAUNCH_KEY = Enum.KeyCode.Space
+local AIM_BROADCAST_INTERVAL = 0.2 -- seconds between AimUpdate packets while aiming
 
-export type State = "Idle" | "Aiming" | "Flying"
+export type State = "Locked" | "Aiming" | "Flying"
 
 local HorseController = {}
 HorseController.__index = HorseController
@@ -45,7 +51,7 @@ function HorseController.new(character: Model): HorseController
 
 	local self: HorseController = setmetatable({
 		Character = character,
-		State = "Idle" :: State,
+		State = "Locked" :: State,
 		_aimIndicator = AimIndicator.new(hrp),
 		_ui = HorseLaunchUI.new(),
 		_janitor = Janitor.new(),
@@ -63,21 +69,15 @@ function HorseController.new(character: Model): HorseController
 	return self
 end
 
--- All keybinds under the "Horse" context live here.
+-- Keybinds under the "Horse" context. Space no longer launches — this is
+-- kept as the home for future ability keys.
 function HorseController._bindInputs(self: HorseController)
-	local launch = Keybind.GetAction(KEYBIND_CONTEXT, "Launch")
-	launch.KeyboardBinding.KeyCode = LAUNCH_KEY
-
-	self._janitor:Add(
-		launch.Pressed:Connect(function()
-			self:_onLaunchKey()
-		end),
-		"Disconnect"
-	)
+	-- Example for later:
+	-- local ability1 = Keybind.GetAction(KEYBIND_CONTEXT, "Ability1")
+	-- ability1.KeyboardBinding.KeyCode = Enum.KeyCode.One
+	-- self._janitor:Add(ability1.Pressed:Connect(function() ... end), "Disconnect")
 end
 
--- UI signals -> aim indicator. The controller is the only piece that knows
--- both objects exist; they never talk to each other directly.
 function HorseController._bindUI(self: HorseController)
 	self._janitor:Add(
 		self._ui.LockToggled:Connect(function(locked: boolean)
@@ -87,47 +87,46 @@ function HorseController._bindUI(self: HorseController)
 	)
 end
 
--- Server -> client state updates.
+-- Everything is server-driven: the server tells us when to aim, when to
+-- hand over our aim, and when we're back to idle.
 function HorseController._bindPackets(self: HorseController)
 	self._janitor:Add(
+		Packets.TurnStarted.OnClientEvent:Connect(function(_duration: number)
+			if self._active then
+				self:_setState("Aiming")
+			end
+		end),
+		"Disconnect"
+	)
+
+	self._janitor:Add(
+		Packets.RequestLaunchData.OnClientEvent:Connect(function()
+			if self._active and self.State == "Aiming" then
+				self:_submitLaunch()
+			end
+		end),
+		"Disconnect"
+	)
+
+	self._janitor:Add(
 		Packets.HorseStateChanged.OnClientEvent:Connect(function(state: string)
-			self:_setState(state :: State)
+			if state == "Idle" then
+				self:_setState("Locked")
+			end
 		end),
 		"Disconnect"
 	)
 end
 
--- The single entry point for the space key. What it does depends on state.
-function HorseController._onLaunchKey(self: HorseController)
-	if not self._active then
-		return
-	end
-
-	if self.State == "Idle" then
-		self:_startAiming()
-	elseif self.State == "Aiming" then
-		self:_launch()
-	end
-	-- "Flying": ignored on purpose.
-end
-
-function HorseController._startAiming(self: HorseController)
-	self:_setState("Aiming")
-end
-
-function HorseController._launch(self: HorseController)
+function HorseController._submitLaunch(self: HorseController)
 	local direction = self._aimIndicator:GetDirection()
 	local power = self._ui:GetPower()
 
 	Packets.LaunchHorse:Fire(direction, power)
-
-	-- Optimistically enter Flying so the key locks out instantly.
-	-- The server remains authoritative and will send us back to Idle.
 	self:_setState("Flying")
 end
 
 -- All show/hide side effects live here, driven purely by state.
--- Adding a new state later = add a branch here, not scattered flags.
 function HorseController._setState(self: HorseController, state: State)
 	if self.State == state then
 		return
@@ -137,10 +136,34 @@ function HorseController._setState(self: HorseController, state: State)
 	if state == "Aiming" then
 		self._aimIndicator:Show()
 		self._ui:Show()
-	else -- Idle or Flying
+		self:_startAimBroadcast()
+	else -- Locked or Flying
+		self:_stopAimBroadcast()
 		self._aimIndicator:Hide()
 		self._ui:Hide()
 	end
+end
+
+-- Throttled aim replication so teammates can see our arrow (server only
+-- relays these in team mode, so sending them always is harmless).
+function HorseController._startAimBroadcast(self: HorseController)
+	local elapsed = 0
+	self._janitor:Add(
+		RunService.Heartbeat:Connect(function(dt: number)
+			elapsed += dt
+			if elapsed < AIM_BROADCAST_INTERVAL then
+				return
+			end
+			elapsed = 0
+			Packets.AimUpdate:Fire(self._aimIndicator:GetDirection())
+		end),
+		"Disconnect",
+		"AimBroadcast"
+	)
+end
+
+function HorseController._stopAimBroadcast(self: HorseController)
+	self._janitor:Remove("AimBroadcast")
 end
 
 function HorseController.Activate(self: HorseController)

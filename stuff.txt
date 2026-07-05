@@ -1,0 +1,19 @@
+Element added into the game:
++ A lobby with spawn points (can ignore this)
++ A folder called "Maps" that has 2 map models in it "ForestMap" & "TestMap"
++ "GameGui" screenGui in StaterGui, moved HorseLaunchFrame into it from "HorseGui". GameGui also has "MenuFrame" that has a TextBox, this box will display stuff like "intermission (10)", "Waiting for players...", ...
++ "MapSpawnPosition" BasePart on workspace
++ "Border" Ball shaped BasePart on workspace (resize and move it onto MapSpawnPosition part)
+
+Main game loop:
+1) Waiting for players (wait untill there are atleast 2 players)
+2) Intermission (wait for 10 seconds then move into game) 
+3) Choose gamemodes: free for all, team (you can see the arrow direction of your team and also they glow blue) (only these 2 gamemodes for now)
+4) Game match:
++ Spawns a randomly chosen map (onto MapSpawnPosition part) and moved players onto it.(Each map has a folder called Spawns and it contains parts that players can spawn into, make sure 2 players dont spawn onto 1 part)
++ Players cannot freely use space to launch horse but it will be turn based(remove press space to launch bc it is only for testing)
++ Every turn player has 10 seconds to adjust direction/power and choose ability they wanna use (add abilities in the future, ignore for now but keep this in mind)
++ After that horses will launch and let the physics happens for 5 seconds, after 5 seconds horse will be anchored and game move onto next turn
++ Each turn the borber surrounding the whole map will shrink and if player touches the border they will get knock back and get damaged (suggest a way to detect collision on this because the border right now is just a ball part)
++ Game finishes when 1 player or team is left after a round and they win that round or game end in a draw when no one survived after a round.
++ Winning gives player exp and tix

@@ -34,7 +34,7 @@ export type HorseLaunchUI = typeof(setmetatable(
 
 function HorseLaunchUI.new(): HorseLaunchUI
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-	local gui = playerGui:WaitForChild("HorseGui") :: ScreenGui
+	local gui = playerGui:WaitForChild("GameGui") :: ScreenGui
 	local frame = gui:WaitForChild("HorseLaunchFrame") :: Frame
 
 	local self: HorseLaunchUI = setmetatable({

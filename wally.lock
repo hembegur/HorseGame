@@ -40,7 +40,7 @@ dependencies = []
 [[package]]
 name = "hembegur/horsegame"
 version = "0.1.0"
-dependencies = [["Chrono", "parihsz/chrono@2.1.4"], ["Fastcastredux", "encodedvenom/fastcastredux@0.1.3"], ["Fusion", "elttob/fusion@0.3.0"], ["Hitbox", "breezy1214/hitbox@4.1.3"], ["Janitor", "howmanysmall/janitor@1.18.3"], ["Packet", "sjdinsd/packet@0.1.91"], ["PartCache", "4igz/partcache@1.0.1"], ["ProfileStore", "detourious/loleris-profilestore@1.0.0"], ["Promise", "evaera/promise@4.0.0"], ["Signal", "sleitnick/signal@2.0.3"], ["TableUtil", "sleitnick/table-util@1.2.1"], ["Timer", "sleitnick/timer@1.1.2"], ["ProfileService", "firebird702/profileservice@1.1.0"]]
+dependencies = [["Chrono", "parihsz/chrono@2.1.4"], ["DataService", "leifstout/dataservice@1.0.0"], ["Fastcastredux", "encodedvenom/fastcastredux@0.1.3"], ["Fusion", "elttob/fusion@0.3.0"], ["Hitbox", "breezy1214/hitbox@4.1.3"], ["Janitor", "howmanysmall/janitor@1.18.3"], ["Packet", "sjdinsd/packet@0.1.91"], ["PartCache", "4igz/partcache@1.0.1"], ["ProfileStore", "detourious/loleris-profilestore@1.0.0"], ["Promise", "evaera/promise@4.0.0"], ["Signal", "sleitnick/signal@2.0.3"], ["TableUtil", "sleitnick/table-util@1.2.1"], ["Timer", "sleitnick/timer@1.1.2"], ["ProfileService", "firebird702/profileservice@1.1.0"]]
 
 [[package]]
 name = "howmanysmall/janitor"
@@ -51,6 +51,21 @@ dependencies = [["Promise", "howmanysmall/typed-promise@4.0.6"]]
 name = "howmanysmall/typed-promise"
 version = "4.0.6"
 dependencies = [["Promise", "evaera/promise@4.0.0"]]
+
+[[package]]
+name = "leifstout/dataservice"
+version = "1.0.0"
+dependencies = [["Janitor", "howmanysmall/janitor@1.18.3"], ["Networker", "leifstout/networker@0.3.1"], ["ProfileStore", "lm-loleris/profilestore@1.0.3"], ["Signal", "sleitnick/signal@2.0.3"]]
+
+[[package]]
+name = "leifstout/networker"
+version = "0.3.1"
+dependencies = [["Signal", "sleitnick/signal@2.0.3"]]
+
+[[package]]
+name = "lm-loleris/profilestore"
+version = "1.0.3"
+dependencies = []
 
 [[package]]
 name = "parihsz/chrono"

@@ -144,7 +144,8 @@ function Horse._stopFacingVelocity(self: Horse)
 	end
 end
 
--- Tears the horse down. Safe to call more than once.
+-- Tears the horse down and gives the rider their normal character back.
+-- Safe to call more than once.
 function Horse.Destroy(self: Horse)
 	if not self._alive then
 		return
@@ -155,6 +156,48 @@ function Horse.Destroy(self: Horse)
 	if self.Model then
 		self.Model:Destroy()
 	end
+
+	self:_restoreCharacter()
+end
+
+-- Undoes the humanoid lockdown from Horse.new so a dismounted player can
+-- walk again without needing a respawn. (Match cleanup respawns everyone
+-- anyway; this is the safety net for dismounting outside that flow.)
+function Horse._restoreCharacter(self: Horse)
+	local character = self.Character
+	if not character or not character.Parent then
+		return -- character already gone; a fresh spawn resets everything
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		for _, state in Enum.HumanoidStateType:GetEnumItems() do
+			if state ~= Enum.HumanoidStateType.None then
+				humanoid:SetStateEnabled(state, true)
+			end
+		end
+		humanoid.PlatformStand = false
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+
+	-- Restore mass; CanCollide is left to the Humanoid, which re-manages
+	-- limb collisions itself once its states are enabled again.
+	for _, part in character:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Massless = false
+		end
+	end
+end
+
+-- Moves the whole assembly (horse + welded rider) to the given CFrame.
+-- Intended to be called while anchored (e.g. placing players on map spawns).
+function Horse.Teleport(self: Horse, cframe: CFrame)
+	if not self._alive then
+		return
+	end
+	self.Hitbox.CFrame = cframe
+	self.Hitbox.AssemblyLinearVelocity = Vector3.zero
+	self.Hitbox.AssemblyAngularVelocity = Vector3.zero
 end
 
 function Horse.Anchor(self: Horse, resetVelocity: boolean)

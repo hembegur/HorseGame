@@ -5,9 +5,15 @@ local packet = require(packages:WaitForChild("Packet"))
 local Packets = {}
 
 Packets.HorseReady = packet("HorseReady", packet.Instance)
--- Packets.luau
 Packets.LaunchHorse = packet("LaunchHorse", packet.Vector3F24, packet.NumberU8) -- direction + power
 Packets.HorseStateChanged = packet("HorseStateChanged", packet.String)
+
+-- Game loop / match
+Packets.MenuText = packet("MenuText", packet.String) -- "Intermission (10)", "Waiting for players...", ...
+Packets.TurnStarted = packet("TurnStarted", packet.NumberU8) -- turn duration in seconds
+Packets.RequestLaunchData = packet("RequestLaunchData") -- server asks client for its final aim
+Packets.AimUpdate = packet("AimUpdate", packet.Vector3F24) -- client -> server, throttled, for teammate arrows
+Packets.TeammateAim = packet("TeammateAim", packet.Instance, packet.Vector3F24) -- server -> teammates
 
 return Packets
 
