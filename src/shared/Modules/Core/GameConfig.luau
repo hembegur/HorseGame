@@ -8,6 +8,7 @@ local GameConfig = {
 	MinPlayers = 2,
 	IntermissionTime = 10, -- seconds
 	ResultsTime = 5, -- seconds to show winner text before next loop
+	MapPosition = Vector3.new(-13, -70, -211),
 
 	-- Match / turns
 	TurnDuration = 10, -- seconds to aim + pick power
@@ -21,6 +22,7 @@ local GameConfig = {
 
 	-- Border
 	Border = {
+		StartDiameter = 300,
 		ShrinkPerTurn = 15, -- studs removed from the DIAMETER each turn
 		MinDiameter = 40,
 		Damage = 20,

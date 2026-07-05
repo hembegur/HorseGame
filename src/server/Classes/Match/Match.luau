@@ -135,16 +135,11 @@ function Match._setup(self: Match)
 	end
 
 	-- Border
-	local borderPart = workspace:FindFirstChild("Border") :: BasePart?
-	if borderPart then
-		local border = Border.new(borderPart, function()
-			return self:_aliveHorses()
-		end)
-		border:Activate()
-		self._border = border
-	else
-		warn("[Match] workspace.Border is missing — match will run without a border")
-	end
+	local border = Border.new(function()
+		return self:_aliveHorses()
+	end)
+	border:Activate()
+	self._border = border
 
 	-- Eliminations: death or leaving
 	for player in self._alive do
@@ -347,7 +342,9 @@ function Match._cleanup(self: Match)
 		if player.Parent then
 			HorseService.RemoveHorse(player)
 			player:SetAttribute("Team", nil)
-			player:LoadCharacter()
+			task.spawn(function()
+				player:LoadCharacterAsync()
+			end)
 		end
 	end
 end

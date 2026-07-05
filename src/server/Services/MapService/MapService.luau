@@ -5,15 +5,14 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local GameConfig = require(ReplicatedStorage.Shared.Modules.Core.GameConfig)
 
 local SPAWN_HEIGHT_OFFSET = 5 -- studs above the spawn part
 
 local MapService = {}
 
 local function getMapsFolder(): Folder
-	local folder = ServerStorage:FindFirstChild("Maps")
-		or ReplicatedStorage:FindFirstChild("Maps")
-		or workspace:FindFirstChild("Maps")
+	local folder = ReplicatedStorage.Assets:FindFirstChild("Maps")
 	assert(folder, "[MapService] Could not find a 'Maps' folder in ServerStorage, ReplicatedStorage, or workspace")
 	return folder :: Folder
 end
@@ -28,10 +27,7 @@ function MapService.LoadRandomMap(): (Model, { BasePart })
 	local template = maps[math.random(#maps)] :: Model
 	local map = template:Clone()
 
-	local anchorPart = workspace:FindFirstChild("MapSpawnPosition") :: BasePart?
-	assert(anchorPart, "[MapService] workspace.MapSpawnPosition is missing")
-
-	map:PivotTo(anchorPart.CFrame)
+	map:PivotTo(CFrame.new(GameConfig.MapPosition))
 	map.Parent = workspace
 
 	local spawnsFolder = map:FindFirstChild("Spawns")

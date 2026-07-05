@@ -107,6 +107,16 @@ local function setupLeaderstats(player: Player)
 	wins.Value = (data.stats and data.stats.wins) or 0
 	wins.Parent = leaderstats
 
+	local exp = Instance.new("IntValue")
+	exp.Name = "Exp"
+	exp.Value = data.exp or 0
+	exp.Parent = leaderstats
+
+	local tix = Instance.new("IntValue")
+	tix.Name = "Tix"
+	tix.Value = data.tix or 0
+	tix.Parent = leaderstats
+
 	leaderstats.Parent = player
 
 	DataService:getChangedSignal(player, { "exp" }):Connect(function(value: number)

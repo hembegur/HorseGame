@@ -35,7 +35,11 @@ export type Border = typeof(setmetatable(
 	Border
 ))
 
-function Border.new(part: BasePart, getTargets: () -> { [Player]: any }): Border
+local BORDER_TEMPLATE = ReplicatedStorage.Assets.Models.Border :: BasePart
+
+function Border.new(getTargets: () -> { [Player]: any }): Border
+	local part = BORDER_TEMPLATE:Clone()
+
 	local self: Border = setmetatable({
 		Part = part,
 		_getTargets = getTargets,
@@ -49,6 +53,11 @@ function Border.new(part: BasePart, getTargets: () -> { [Player]: any }): Border
 	part.CanCollide = false
 	part.CanTouch = false
 	part.CanQuery = false
+	part.Parent = workspace
+	part.Position = GameConfig.MapPosition
+
+	part.Size = Vector3.new(CONFIG.StartDiameter, CONFIG.StartDiameter, CONFIG.StartDiameter)
+	self._initialSize = part.Size
 
 	return self
 end
@@ -117,7 +126,7 @@ end
 -- and stops monitoring. The part itself is a permanent workspace fixture.
 function Border.Destroy(self: Border)
 	self:Deactivate()
-	self.Part.Size = self._initialSize
+	self.Part:Destroy()
 	table.clear(self._lastDamage)
 end
 
